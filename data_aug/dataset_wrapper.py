@@ -20,20 +20,50 @@ class DataSetWrapper(object):
     def get_data_loaders(self):
         data_augment = self._get_simclr_pipeline_transform()
 
-        train_dataset = datasets.STL10('./data', split='train+unlabeled', download=True,
-                                       transform=SimCLRDataTransform(data_augment))
+        # train_dataset = datasets.STL10('./data', split='train+unlabeled', download=True,
+        #                                transform=SimCLRDataTransform(data_augment))
 
-        train_loader, valid_loader = self.get_train_validation_data_loaders(train_dataset)
+        # train_loader, valid_loader = self.get_train_validation_data_loaders(train_dataset)
+
+        dataset_train = ImageFolder(
+            '/home/users/v-sumeth/covid/ChestXray-NIHCC/train',
+            transform=SimCLRDataTransform(data_augment)
+        )
+
+        dataset_test = ImageFolder(
+            '/home/users/v-sumeth/covid/ChestXray-NIHCC/test',
+            transform=SimCLRDataTransform(data_augment)
+        )
+
+        train_loader = DataLoader(
+            dataset_train, 
+            batch_size=self.batch_size, 
+            shuffle=True, 
+            num_workers=self.num_workers, 
+            drop_last=True
+        )
+
+        valid_loader = DataLoader(
+            dataset_test, 
+            batch_size=self.batch_size, 
+            shuffle=True, 
+            num_workers=self.num_workers, 
+            drop_last=True
+        )
+
         return train_loader, valid_loader
 
     def _get_simclr_pipeline_transform(self):
         # get a set of data augmentation transformations as described in the SimCLR paper.
         color_jitter = transforms.ColorJitter(0.8 * self.s, 0.8 * self.s, 0.8 * self.s, 0.2 * self.s)
+        kernel_size = int(0.1 * self.input_shape[0])
+        if kernel_size % 2 != 1:
+            kernel_size += 1
         data_transforms = transforms.Compose([transforms.RandomResizedCrop(size=self.input_shape[0]),
                                               transforms.RandomHorizontalFlip(),
                                               transforms.RandomApply([color_jitter], p=0.8),
                                               transforms.RandomGrayscale(p=0.2),
-                                              GaussianBlur(kernel_size=int(0.1 * self.input_shape[0])),
+                                              GaussianBlur(kernel_size=kernel_size),
                                               transforms.ToTensor()])
         return data_transforms
 
